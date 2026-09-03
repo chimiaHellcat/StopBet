@@ -38,10 +38,15 @@ public sealed class ServicoBloqueioDominioWindows : IServicoBloqueioDominio
             var linhas = await LerLinhasAsync(cancellationToken);
             var (indiceInicio, indiceFim, dominiosBloqueados) = ExtrairSecaoGerenciada(linhas);
 
-            if (dominiosBloqueados.Any(d => string.Equals(d, dominio, StringComparison.OrdinalIgnoreCase)))
-                return; // ja bloqueado - idempotente
+            var variantes = ObterVariantes(dominio);
+            var faltantes = variantes
+                .Where(v => !dominiosBloqueados.Any(d => string.Equals(d, v, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
 
-            dominiosBloqueados.Add(dominio);
+            if (faltantes.Count == 0)
+                return; // ja bloqueado (todas as variantes) - idempotente
+
+            dominiosBloqueados.AddRange(faltantes);
             var novasLinhas = ReconstruirArquivo(linhas, indiceInicio, indiceFim, dominiosBloqueados);
             await EscreverLinhasAsync(novasLinhas, cancellationToken);
         }
@@ -63,7 +68,8 @@ public sealed class ServicoBloqueioDominioWindows : IServicoBloqueioDominio
             var linhas = await LerLinhasAsync(cancellationToken);
             var (indiceInicio, indiceFim, dominiosBloqueados) = ExtrairSecaoGerenciada(linhas);
 
-            var removeu = dominiosBloqueados.RemoveAll(d => string.Equals(d, dominio, StringComparison.OrdinalIgnoreCase)) > 0;
+            var variantes = ObterVariantes(dominio).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var removeu = dominiosBloqueados.RemoveAll(d => variantes.Contains(d)) > 0;
             if (!removeu)
                 return; // nao estava bloqueado - idempotente
 
@@ -76,6 +82,19 @@ public sealed class ServicoBloqueioDominioWindows : IServicoBloqueioDominio
         }
 
         await FlushDnsAsync();
+    }
+
+    // Um dominio no hosts so cobre exatamente aquele hostname - "betano.bet.br" NAO bloqueia
+    // "www.betano.bet.br" (sao entradas distintas). A grande maioria dos sites reais serve o
+    // trafego pelo subdominio www, entao sempre bloqueamos as duas variantes juntas.
+    private static IEnumerable<string> ObterVariantes(string dominio)
+    {
+        yield return dominio;
+
+        if (dominio.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            yield return dominio["www.".Length..];
+        else
+            yield return $"www.{dominio}";
     }
 
     private async Task<string[]> LerLinhasAsync(CancellationToken cancellationToken)
