@@ -3,9 +3,18 @@
 // Estrategia: dominios ja conhecidos ganham uma regra estatica no
 // declarativeNetRequest assim que a extensao inicia (bloqueio instantaneo e
 // confiavel, no nivel do proprio motor do navegador). Dominios desconhecidos
-// sao verificados no momento da primeira navegacao via webNavigation.onBeforeNavigate,
-// consultando o app StopBet (que classifica via Gemini); se for aposta, a aba e
-// redirecionada e uma regra e criada para que futuras tentativas sejam instantaneas.
+// sao verificados consultando o app StopBet (que classifica via Gemini); se for
+// aposta, a aba e redirecionada e uma regra e criada para que futuras tentativas
+// sejam instantaneas.
+//
+// A verificacao roda em DOIS momentos, nao so um:
+//   - onBeforeNavigate: URL original, antes de qualquer redirecionamento. Cobre
+//     o caso comum de digitar/colar o dominio direto na barra de enderecos.
+//   - onCommitted: URL final, ja resolvida apos redirecionamentos HTTP. Cobre
+//     links de anuncios/afiliados (ex.: clique num ad que passa por um dominio
+//     de rastreamento antes de cair no site de apostas de verdade) - sem isso,
+//     onBeforeNavigate sozinho so enxerga o dominio do redirecionador, nunca o
+//     destino final, e o site de apostas passa batido.
 
 const SERVIDOR_LOCAL = "http://127.0.0.1:5127";
 const dominiosVerificadosNestaSessao = new Set();
@@ -62,10 +71,8 @@ async function carregarListaInicial() {
   }
 }
 
-chrome.webNavigation.onBeforeNavigate.addListener(async (detalhe) => {
-  if (detalhe.frameId !== 0) return; // so navegacao principal da aba, nao iframes/recursos
-
-  const dominio = extrairDominio(detalhe.url);
+async function verificarEBloquearSeNecessario(url, tabId) {
+  const dominio = extrairDominio(url);
   if (!dominio || dominiosVerificadosNestaSessao.has(dominio)) return;
   if (await jaTemRegra(dominio)) return; // ja coberto por uma regra existente
 
@@ -75,13 +82,23 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (detalhe) => {
 
     if (dados.bloquear) {
       await adicionarRegraBloqueio(dominio);
-      chrome.tabs.update(detalhe.tabId, { url: urlPaginaBloqueio(dominio) });
+      chrome.tabs.update(tabId, { url: urlPaginaBloqueio(dominio) });
     } else {
       dominiosVerificadosNestaSessao.add(dominio);
     }
   } catch (erro) {
     console.warn("StopBet: falha ao verificar dominio (o app StopBet esta aberto?)", erro);
   }
+}
+
+chrome.webNavigation.onBeforeNavigate.addListener((detalhe) => {
+  if (detalhe.frameId !== 0) return; // so navegacao principal da aba, nao iframes/recursos
+  verificarEBloquearSeNecessario(detalhe.url, detalhe.tabId);
+});
+
+chrome.webNavigation.onCommitted.addListener((detalhe) => {
+  if (detalhe.frameId !== 0) return;
+  verificarEBloquearSeNecessario(detalhe.url, detalhe.tabId);
 });
 
 chrome.runtime.onInstalled.addListener(carregarListaInicial);
