@@ -23,6 +23,12 @@ public sealed class ServicoClassificacaoUrlGemini : IServicoClassificacaoUrl
         _extratorMetadados = extratorMetadados;
     }
 
+    // Numero de tentativas extras (alem da primeira) para erros transitorios da API
+    // (429 rate limit, 503 sobrecarga) - descobertos ao testar varios dominios em
+    // sequencia rapida: sem retry, esses erros derrubavam a verificacao silenciosamente
+    // (a extensao so loga um aviso e o dominio fica sem bloquear, sem nenhum erro visivel).
+    private const int MaximoTentativas = 4;
+
     public async Task<ResultadoClassificacao> ClassificarAsync(string dominio, string html, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dominio);
@@ -33,25 +39,37 @@ public sealed class ServicoClassificacaoUrlGemini : IServicoClassificacaoUrl
 
         var metadados = _extratorMetadados.Extrair(html);
         var requisicao = MontarRequisicao(dominio, metadados);
+        var url = $"{UrlBase}/{Modelo}:generateContent?key={chaveApi}";
 
-        using var resposta = await _httpClient.PostAsJsonAsync(
-            $"{UrlBase}/{Modelo}:generateContent?key={chaveApi}",
-            requisicao,
-            cancellationToken);
+        for (var tentativa = 1; ; tentativa++)
+        {
+            using var resposta = await _httpClient.PostAsJsonAsync(url, requisicao, cancellationToken);
 
-        resposta.EnsureSuccessStatusCode();
+            var transitorio = resposta.StatusCode is System.Net.HttpStatusCode.TooManyRequests
+                or System.Net.HttpStatusCode.ServiceUnavailable;
 
-        var corpoResposta = await resposta.Content.ReadFromJsonAsync<RespostaGerarConteudo>(cancellationToken: cancellationToken);
+            if (transitorio && tentativa < MaximoTentativas)
+            {
+                var espera = resposta.Headers.RetryAfter?.Delta
+                    ?? TimeSpan.FromSeconds(Math.Pow(2, tentativa)); // 2s, 4s, 8s...
+                await Task.Delay(espera, cancellationToken);
+                continue;
+            }
 
-        var textoJson = corpoResposta?.Candidatos?.FirstOrDefault()?.Conteudo?.Partes?.FirstOrDefault()?.Texto;
-        if (string.IsNullOrWhiteSpace(textoJson))
-            throw new InvalidOperationException("A API do Gemini nao retornou conteudo classificavel.");
+            resposta.EnsureSuccessStatusCode();
 
-        var resultado = JsonSerializer.Deserialize<ResultadoClassificacao>(textoJson);
-        if (resultado is null)
-            throw new InvalidOperationException("Nao foi possivel interpretar a resposta da API do Gemini.");
+            var corpoResposta = await resposta.Content.ReadFromJsonAsync<RespostaGerarConteudo>(cancellationToken: cancellationToken);
 
-        return resultado;
+            var textoJson = corpoResposta?.Candidatos?.FirstOrDefault()?.Conteudo?.Partes?.FirstOrDefault()?.Texto;
+            if (string.IsNullOrWhiteSpace(textoJson))
+                throw new InvalidOperationException("A API do Gemini nao retornou conteudo classificavel.");
+
+            var resultado = JsonSerializer.Deserialize<ResultadoClassificacao>(textoJson);
+            if (resultado is null)
+                throw new InvalidOperationException("Nao foi possivel interpretar a resposta da API do Gemini.");
+
+            return resultado;
+        }
     }
 
     private static RequisicaoGerarConteudo MontarRequisicao(string dominio, MetadadosPagina metadados)
