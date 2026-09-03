@@ -10,7 +10,9 @@ O sistema combina:
 
 - Uma lista local de domínios conhecidos (cache SQLite), para bloqueio imediato;
 - Classificação dinâmica de domínios desconhecidos via Google Gemini API, com o resultado persistido para consultas futuras;
-- *(planejado)* Interceptação de tráfego DNS via `VpnService` no Android e edição do arquivo `hosts` no Windows;
+- Bloqueio efetivo no Windows via edição do arquivo `hosts`, aplicado automaticamente a cada decisão positiva;
+- Bloqueio em tempo real no navegador (Edge/Chrome) via extensão própria, inclusive para domínios nunca vistos antes;
+- *(planejado)* Interceptação de tráfego DNS via `VpnService` no Android;
 - *(planejado)* Sincronização de domínios bloqueados entre dispositivos via Supabase.
 
 ## Tecnologias
@@ -19,20 +21,26 @@ O sistema combina:
 - **SQLite** (via `sqlite-net-pcl`) — cache local de domínios bloqueados
 - **Google Gemini API** (`gemini-3.5-flash-lite`) — classificação de domínios desconhecidos, com resposta em JSON estruturado
 - **HtmlAgilityPack** — extração de `<title>` e meta description do HTML analisado
+- **Extensão de navegador (Manifest V3)** — bloqueio em tempo real no Chromium (Edge/Chrome/Brave/Opera), via `declarativeNetRequest` e `webNavigation`
 
 ## Estrutura do projeto
 
 ```
-StopBet/
-├── Core/                          # Logica de negocio, sem codigo especifico de plataforma
-│   ├── Modelos/                   # DominioBloqueado, OrigemDominio
-│   ├── Dados/                     # Conexao SQLite, seed de dominios conhecidos
-│   ├── Repositorios/              # CRUD assincrono sobre DominioBloqueado
-│   └── Servicos/
-│       ├── Classificacao/         # Extracao de metadados HTML + classificacao via Gemini
-│       └── Verificacao/           # Orquestracao: lista local -> IA -> persistencia
-├── Platforms/                     # Codigo especifico de Android/Windows/iOS/MacCatalyst (gerado pelo template)
-└── Resources/                     # Icones, fontes, estilos
+StopBet/                             # Solucao
+├── StopBet/                         # Projeto .NET MAUI
+│   ├── Core/                        # Logica de negocio, sem codigo especifico de plataforma
+│   │   ├── Modelos/                 # DominioBloqueado, OrigemDominio
+│   │   ├── Dados/                   # Conexao SQLite, seed de dominios conhecidos
+│   │   ├── Repositorios/            # CRUD assincrono sobre DominioBloqueado
+│   │   └── Servicos/
+│   │       ├── Classificacao/       # Extracao de metadados HTML + classificacao via Gemini
+│   │       ├── Verificacao/         # Orquestracao: lista local -> IA -> persistencia -> bloqueio
+│   │       ├── Bloqueio/            # Contrato de bloqueio + sincronizador
+│   │       └── ServidorLocal/       # Contrato da ponte HTTP com a extensao de navegador
+│   ├── Platforms/                   # Codigo especifico de plataforma
+│   │   └── Windows/                 # Edicao do hosts, servidor local (ponte com a extensao)
+│   └── Resources/                   # Icones, fontes, estilos
+└── extension/                       # Extensao de navegador (Manifest V3, Chromium)
 ```
 
 ## Status atual
@@ -46,11 +54,13 @@ StopBet/
 - [x] Serviço de verificação/decisão (`ServicoVerificacaoDominio`) — lista local primeiro, IA como fallback, persistindo classificações positivas
 - [x] Tela de teste (`MainPage`) listando os domínios em cache, com IP resolvido via DNS
 - [x] Bloqueio via edição do arquivo `hosts` (Windows) — `IServicoBloqueioDominio` / `ServicoBloqueioDominioWindows`, idempotente, testado contra o hosts real com elevação (`requireAdministrator`)
-- [x] Aplicação em tempo real: `ServicoVerificacaoDominio` aciona o bloqueio imediatamente a cada decisão positiva, e `SincronizadorBloqueio` aplica no hosts tudo que já está na lista local assim que o app inicia. Testado no navegador de verdade: domínios reais de apostas (seed + `1xbet.com` classificado pela IA) resultaram em `ERR_CONNECTION_REFUSED`
+- [x] Aplicação em tempo real: `ServicoVerificacaoDominio` aciona o bloqueio imediatamente a cada decisão positiva, e `SincronizadorBloqueio` aplica no hosts tudo que já está na lista local assim que o app inicia. Testado no navegador de verdade: domínios reais de apostas (seed + `1xbet.com` classificado pela IA) resultaram em `ERR_CONNECTION_REFUSED`, incluindo a variante `www.` (bug real encontrado e corrigido: uma entrada de hosts não cobre a outra)
+- [x] Extensão de navegador (Chromium) com bloqueio em tempo real: domínios conhecidos via `declarativeNetRequest` (instantâneo), domínios desconhecidos verificados ao vivo na primeira navegação (`webNavigation.onBeforeNavigate` → servidor local → Gemini). Página de bloqueio própria com mensagem motivacional. Testado com domínio conhecido (`bet365.bet.br`) e desconhecido (`sportingbet.com`), ambos bloqueados corretamente
 
 **Ainda não implementado:**
 
 - [ ] Bloqueio via `VpnService` (Android) — aguardando emulador/dispositivo físico disponível
+- [ ] Extensão para Firefox (API similar à do Chromium, mas manifest e alguns detalhes diferentes)
 - [ ] Sincronização entre dispositivos via Supabase
 - [ ] Interface final do usuário (a tela atual é apenas para testes)
 
@@ -77,6 +87,17 @@ setx GEMINI_API_KEY "sua-chave-aqui"
 dotnet build StopBet/StopBet.csproj -f net10.0-windows10.0.19041.0
 dotnet run --project StopBet/StopBet.csproj -f net10.0-windows10.0.19041.0
 ```
+
+> O app pede elevação (UAC) ao abrir — é necessário para editar o arquivo `hosts`. Ao rodar com o depurador do VS Code/Visual Studio isso pode falhar (um processo não elevado não consegue anexar um depurador a um processo elevado); prefira rodar o `.exe` compilado diretamente (`StopBet/bin/Debug/net10.0-windows10.0.19041.0/win-x64/StopBet.exe`).
+
+### Instalar a extensão de navegador (opcional, para bloqueio em tempo real)
+
+Com o app StopBet rodando (ele expõe a ponte local em `http://127.0.0.1:5127`):
+
+1. Abra `edge://extensions` (ou `chrome://extensions` no Chrome)
+2. Ative o **Modo de desenvolvedor**
+3. Clique em **Carregar sem compactação** e selecione a pasta `extension/` deste repositório
+4. Pronto — domínios já conhecidos são bloqueados na hora; domínios novos são verificados em tempo real na primeira tentativa de acesso
 
 ## Autor
 
