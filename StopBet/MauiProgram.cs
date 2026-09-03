@@ -3,6 +3,7 @@ using StopBet.Core.Dados;
 using StopBet.Core.Repositorios;
 using StopBet.Core.Servicos.Bloqueio;
 using StopBet.Core.Servicos.Classificacao;
+using StopBet.Core.Servicos.ServidorLocal;
 using StopBet.Core.Servicos.Verificacao;
 
 namespace StopBet;
@@ -34,6 +35,7 @@ public static class MauiProgram
 
 #if WINDOWS
 		builder.Services.AddSingleton<IServicoBloqueioDominio, StopBet.WinUI.ServicoBloqueioDominioWindows>();
+		builder.Services.AddSingleton<IServidorLocal, StopBet.WinUI.ServidorLocalWindows>();
 #endif
 
 		builder.Services.AddSingleton<SincronizadorBloqueio>();
