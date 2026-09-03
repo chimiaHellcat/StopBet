@@ -46,6 +46,7 @@ StopBet/
 - [x] Serviço de verificação/decisão (`ServicoVerificacaoDominio`) — lista local primeiro, IA como fallback, persistindo classificações positivas
 - [x] Tela de teste (`MainPage`) listando os domínios em cache, com IP resolvido via DNS
 - [x] Bloqueio via edição do arquivo `hosts` (Windows) — `IServicoBloqueioDominio` / `ServicoBloqueioDominioWindows`, idempotente, testado contra o hosts real com elevação (`requireAdministrator`)
+- [x] Aplicação em tempo real: `ServicoVerificacaoDominio` aciona o bloqueio imediatamente a cada decisão positiva, e `SincronizadorBloqueio` aplica no hosts tudo que já está na lista local assim que o app inicia. Testado no navegador de verdade: domínios reais de apostas (seed + `1xbet.com` classificado pela IA) resultaram em `ERR_CONNECTION_REFUSED`
 
 **Ainda não implementado:**
 
