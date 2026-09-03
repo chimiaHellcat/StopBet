@@ -36,6 +36,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IServicoBloqueioDominio, StopBet.WinUI.ServicoBloqueioDominioWindows>();
 #endif
 
+		builder.Services.AddSingleton<SincronizadorBloqueio>();
 		builder.Services.AddTransient<MainPage>();
 
 		return builder.Build();
