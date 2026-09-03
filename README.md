@@ -45,11 +45,11 @@ StopBet/
 - [x] Seed inicial com 10 domínios de apostas conhecidos (`.bet.br`, origem `ListaFixa`)
 - [x] Serviço de verificação/decisão (`ServicoVerificacaoDominio`) — lista local primeiro, IA como fallback, persistindo classificações positivas
 - [x] Tela de teste (`MainPage`) listando os domínios em cache, com IP resolvido via DNS
+- [x] Bloqueio via edição do arquivo `hosts` (Windows) — `IServicoBloqueioDominio` / `ServicoBloqueioDominioWindows`, idempotente, testado contra o hosts real com elevação (`requireAdministrator`)
 
 **Ainda não implementado:**
 
-- [ ] Bloqueio via `VpnService` (Android)
-- [ ] Bloqueio via edição do arquivo `hosts` (Windows)
+- [ ] Bloqueio via `VpnService` (Android) — aguardando emulador/dispositivo físico disponível
 - [ ] Sincronização entre dispositivos via Supabase
 - [ ] Interface final do usuário (a tela atual é apenas para testes)
 
