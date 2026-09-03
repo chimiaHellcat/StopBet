@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using StopBet.Core.Dados;
 using StopBet.Core.Repositorios;
+using StopBet.Core.Servicos.Bloqueio;
 using StopBet.Core.Servicos.Classificacao;
 using StopBet.Core.Servicos.Verificacao;
 
@@ -30,6 +31,11 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ExtratorMetadadosHtml>();
 		builder.Services.AddHttpClient<IServicoClassificacaoUrl, ServicoClassificacaoUrlGemini>();
 		builder.Services.AddSingleton<IServicoVerificacaoDominio, ServicoVerificacaoDominio>();
+
+#if WINDOWS
+		builder.Services.AddSingleton<IServicoBloqueioDominio, StopBet.WinUI.ServicoBloqueioDominioWindows>();
+#endif
+
 		builder.Services.AddTransient<MainPage>();
 
 		return builder.Build();
