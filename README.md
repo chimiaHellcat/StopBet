@@ -15,6 +15,19 @@ O sistema combina:
 - *(planejado)* Interceptação de tráfego DNS via `VpnService` no Android;
 - *(planejado)* Sincronização de domínios bloqueados entre dispositivos via Supabase.
 
+## Por que hosts *e* extensão de navegador?
+
+O bloqueio via edição do arquivo `hosts` do Windows tem uma limitação importante que só ficou evidente durante o desenvolvimento: navegadores modernos (Chrome, Edge, Brave) vêm com **DNS-over-HTTPS (DoH / "Secure DNS")** ativado por padrão, resolvendo domínios diretamente em um servidor DNS criptografado (ex.: Google, Cloudflare) sem passar pela resolução de nomes do sistema operacional. Como o `hosts` só é consultado pelo resolvedor do SO, um navegador com DoH ativo pode simplesmente ignorá-lo — o site de apostas abriria normalmente apesar do bloqueio estar "ativo", criando uma falha silenciosa: o usuário confiaria em uma proteção que, na prática, não estaria funcionando.
+
+A extensão de navegador fecha exatamente essa lacuna, atuando em uma camada diferente: em vez de depender da resolução de nomes, ela intercepta a navegação diretamente no navegador (via `declarativeNetRequest`/`webNavigation`), funcionando independentemente de como — ou onde — o DNS foi resolvido.
+
+As duas abordagens são complementares, não redundantes:
+
+- **`hosts`** — nível do sistema operacional; cobre qualquer aplicação, não só navegadores; mas pode ser contornado por DoH
+- **extensão de navegador** — nível do navegador; não é afetada por DoH; mas cobre apenas o navegador em que está instalada
+
+Essa combinação foi uma decisão técnica tomada durante o desenvolvimento, indo além do escopo originalmente proposto (`VpnService` no Android + edição do `hosts` no Windows), especificamente para eliminar essa lacuna de contorno via DoH — uma camada adicional de defesa em profundidade, e não uma solução redundante.
+
 ## Tecnologias
 
 - **.NET MAUI (C#)** — aplicação multiplataforma (Android e Windows)
