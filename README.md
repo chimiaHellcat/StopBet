@@ -68,7 +68,8 @@ StopBet/                             # Solucao
 - [x] Tela de teste (`MainPage`) listando os domínios em cache, com IP resolvido via DNS
 - [x] Bloqueio via edição do arquivo `hosts` (Windows) — `IServicoBloqueioDominio` / `ServicoBloqueioDominioWindows`, idempotente, testado contra o hosts real com elevação (`requireAdministrator`)
 - [x] Aplicação em tempo real: `ServicoVerificacaoDominio` aciona o bloqueio imediatamente a cada decisão positiva, e `SincronizadorBloqueio` aplica no hosts tudo que já está na lista local assim que o app inicia. Testado no navegador de verdade: domínios reais de apostas (seed + `1xbet.com` classificado pela IA) resultaram em `ERR_CONNECTION_REFUSED`, incluindo a variante `www.` (bug real encontrado e corrigido: uma entrada de hosts não cobre a outra)
-- [x] Extensão de navegador (Chromium) com bloqueio em tempo real: domínios conhecidos via `declarativeNetRequest` (instantâneo), domínios desconhecidos verificados ao vivo na primeira navegação (`webNavigation.onBeforeNavigate` → servidor local → Gemini). Página de bloqueio própria com mensagem motivacional. Testado com domínio conhecido (`bet365.bet.br`) e desconhecido (`sportingbet.com`), ambos bloqueados corretamente
+- [x] Extensão de navegador (Chromium) com bloqueio em tempo real: domínios conhecidos via `declarativeNetRequest` (instantâneo), domínios desconhecidos verificados ao vivo tanto na navegação direta (`webNavigation.onBeforeNavigate`, URL original) quanto após redirecionamentos HTTP (`webNavigation.onCommitted`, URL final) → servidor local → Gemini. Página de bloqueio própria com mensagem motivacional. Testado com domínio conhecido (`bet365.bet.br`), desconhecido via digitação direta (`sportingbet.com`) e desconhecido via cadeia de redirecionamento simulando um clique em anúncio/link de afiliado (`brazino777.bet.br`), todos bloqueados corretamente
+- [x] Resposta da verificação em tempo real desacoplada da aplicação do bloqueio no `hosts`: a extensão recebe o veredito assim que a classificação termina, sem esperar a escrita no `hosts` nem o `ipconfig /flushdns` (que sozinho custa ~1s de spawn de processo) — essa aplicação roda em segundo plano, já que o bloqueio da aba pela extensão não depende do `hosts`
 
 **Ainda não implementado:**
 
@@ -76,6 +77,10 @@ StopBet/                             # Solucao
 - [ ] Extensão para Firefox (API similar à do Chromium, mas manifest e alguns detalhes diferentes)
 - [ ] Sincronização entre dispositivos via Supabase
 - [ ] Interface final do usuário (a tela atual é apenas para testes)
+
+## Limitações conhecidas
+
+- **Latência na primeira verificação de um domínio desconhecido**: entre ~1s e ~4s, na prática, entre a navegação e o bloqueio efetivo — tempo integralmente da chamada de rede à API do Gemini (inferência do modelo), já que toda a aplicação do bloqueio local (regra do `declarativeNetRequest`, escrita no `hosts`) roda de forma desacoplada e não soma a esse tempo. Durante essa janela, o site pode chegar a carregar brevemente antes do redirecionamento. É uma limitação inerente a depender de uma IA externa para classificar domínios nunca vistos antes — domínios já conhecidos (seed ou já classificados antes) continuam bloqueados instantaneamente, sem essa espera. Decisão tomada durante o desenvolvimento: aceitar essa variância como o custo do modelo em tempo real, em vez de trocar de modelo de IA ou introduzir heurísticas locais adicionais (nome do domínio, por exemplo) que fugiriam do escopo de "classificação via IA" proposto no TCC.
 
 ## Como rodar
 

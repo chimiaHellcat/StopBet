@@ -34,7 +34,7 @@ public sealed class ServicoVerificacaoDominio : IServicoVerificacaoDominio
         var existente = await _repositorio.ObterPorNomeDominioAsync(dominio);
         if (existente is not null)
         {
-            await AplicarBloqueioAsync(dominio, cancellationToken);
+            AplicarBloqueioEmSegundoPlano(dominio, cancellationToken);
             return new ResultadoVerificacaoDominio(
                 DeveBloquear: true,
                 Categoria: existente.Categoria,
@@ -52,7 +52,7 @@ public sealed class ServicoVerificacaoDominio : IServicoVerificacaoDominio
                 Origem = OrigemDominio.ClassificadoPorIA,
                 DataInclusao = DateTime.UtcNow
             });
-            await AplicarBloqueioAsync(dominio, cancellationToken);
+            AplicarBloqueioEmSegundoPlano(dominio, cancellationToken);
         }
 
         return new ResultadoVerificacaoDominio(
@@ -61,9 +61,27 @@ public sealed class ServicoVerificacaoDominio : IServicoVerificacaoDominio
             Origem: OrigemDominio.ClassificadoPorIA);
     }
 
-    private async Task AplicarBloqueioAsync(string dominio, CancellationToken cancellationToken)
+    // O bloqueio via hosts (escrita em disco + "ipconfig /flushdns") existe para cobrir
+    // outros navegadores/apps sem a extensao - quem chamou VerificarDominioAsync (a extensao,
+    // via servidor local) ja bloqueia a aba sozinha com base no veredito retornado, sem
+    // depender do hosts. Por isso essa aplicacao roda em segundo plano, sem atrasar a resposta:
+    // o flushdns em especial gasta centenas de ms a mais de 1s so pelo custo de iniciar o
+    // processo externo, tempo que so importa para o caminho do hosts, nao para quem esta chamando.
+    private void AplicarBloqueioEmSegundoPlano(string dominio, CancellationToken cancellationToken)
     {
-        if (_servicoBloqueio is not null)
-            await _servicoBloqueio.BloquearAsync(dominio, cancellationToken);
+        if (_servicoBloqueio is null)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _servicoBloqueio.BloquearAsync(dominio, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Falha ao aplicar bloqueio em segundo plano para {dominio}: {ex}");
+            }
+        }, cancellationToken);
     }
 }
