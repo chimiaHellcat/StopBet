@@ -13,6 +13,7 @@
                     <Label Text="Visao geral da protecao contra sites de apostas e cassinos online" Style="{StaticResource SubHeadline}" />
                 </VerticalStackLayout>
                 <Button
+                    x:Name="AtualizarBtn"
                     Grid.Column="1"
                     Text="Atualizar"
                     Style="{StaticResource BotaoSecundario}"

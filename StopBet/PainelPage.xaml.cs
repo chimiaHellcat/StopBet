@@ -112,6 +112,19 @@ public partial class PainelPage : ContentPage
 
     private async void OnAtualizarClicked(object? sender, EventArgs e)
     {
+        // AtualizarAsync sozinho e rapido demais (SQLite local) pra dar qualquer
+        // feedback visual de que o clique fez algo - se os numeros nao mudarem
+        // (o caso mais comum), parece que o botao nao fez nada. Por isso o texto
+        // muda visivelmente em vez de só re-renderizar em silencio.
+        AtualizarBtn.IsEnabled = false;
+        AtualizarBtn.Text = "Atualizando...";
+
         await AtualizarAsync();
+
+        AtualizarBtn.Text = "Atualizado";
+        await Task.Delay(800);
+
+        AtualizarBtn.Text = "Atualizar";
+        AtualizarBtn.IsEnabled = true;
     }
 }
