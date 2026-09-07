@@ -3,7 +3,7 @@
   "name": "StopBet - Bloqueio de Apostas",
   "version": "1.0.0",
   "description": "Bloqueia sites de apostas e cassinos online em tempo real, como apoio ao tratamento da ludopatia.",
-  "permissions": ["declarativeNetRequest", "webNavigation", "tabs"],
+  "permissions": ["declarativeNetRequest", "webNavigation", "tabs", "alarms"],
   "host_permissions": ["http://127.0.0.1/*", "<all_urls>"],
   "background": {
     "service_worker": "background.js"

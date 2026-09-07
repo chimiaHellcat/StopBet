@@ -15,6 +15,12 @@
 //     de rastreamento antes de cair no site de apostas de verdade) - sem isso,
 //     onBeforeNavigate sozinho so enxerga o dominio do redirecionador, nunca o
 //     destino final, e o site de apostas passa batido.
+//
+// As regras do declarativeNetRequest sao reconciliadas com a lista do app (nao so
+// preenchidas): dominios removidos no app (ex.: desbloqueados manualmente) tem sua
+// regra apagada aqui tambem, nao so adicionada quando surgem. Sem isso, uma vez
+// bloqueado, o dominio ficaria bloqueado na extensao para sempre, mesmo depois de
+// removido do app - so o hosts do Windows refletiria a remocao.
 
 const SERVIDOR_LOCAL = "http://127.0.0.1:5127";
 const dominiosVerificadosNestaSessao = new Set();
@@ -31,9 +37,15 @@ function urlPaginaBloqueio(dominio) {
   return chrome.runtime.getURL(`bloqueado.html?dominio=${encodeURIComponent(dominio)}`);
 }
 
+function dominioDaRegra(regra) {
+  const filtro = regra.condition && regra.condition.urlFilter;
+  if (!filtro || !filtro.startsWith("||") || !filtro.endsWith("^")) return null;
+  return filtro.slice(2, -1);
+}
+
 async function jaTemRegra(dominio) {
   const regras = await chrome.declarativeNetRequest.getDynamicRules();
-  return regras.some((r) => r.condition && r.condition.urlFilter === `||${dominio}^`);
+  return regras.some((r) => dominioDaRegra(r) === dominio);
 }
 
 async function proximoIdRegra() {
@@ -59,15 +71,32 @@ async function adicionarRegraBloqueio(dominio) {
   });
 }
 
-async function carregarListaInicial() {
+// Reconcilia as regras do DNR com a lista atual do app: adiciona o que falta E
+// remove regras de dominios que nao estao mais na lista (foram desbloqueados/removidos
+// no app). Chamada na inicializacao e periodicamente (ver chrome.alarms mais abaixo).
+async function sincronizarRegras() {
   try {
     const resposta = await fetch(`${SERVIDOR_LOCAL}/lista`);
     const dados = await resposta.json();
-    for (const dominio of dados.dominios ?? []) {
+    const dominiosConhecidos = new Set(dados.dominios ?? []);
+
+    const regras = await chrome.declarativeNetRequest.getDynamicRules();
+    const idsParaRemover = regras
+      .filter((r) => {
+        const dominio = dominioDaRegra(r);
+        return dominio && !dominiosConhecidos.has(dominio);
+      })
+      .map((r) => r.id);
+
+    if (idsParaRemover.length > 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: idsParaRemover });
+    }
+
+    for (const dominio of dominiosConhecidos) {
       await adicionarRegraBloqueio(dominio);
     }
   } catch (erro) {
-    console.warn("StopBet: nao foi possivel carregar a lista local (o app StopBet esta aberto?)", erro);
+    console.warn("StopBet: nao foi possivel sincronizar a lista local (o app StopBet esta aberto?)", erro);
   }
 }
 
@@ -101,6 +130,19 @@ chrome.webNavigation.onCommitted.addListener((detalhe) => {
   verificarEBloquearSeNecessario(detalhe.url, detalhe.tabId);
 });
 
-chrome.runtime.onInstalled.addListener(carregarListaInicial);
-chrome.runtime.onStartup.addListener(carregarListaInicial);
-carregarListaInicial();
+const ALARME_SINCRONIZACAO = "stopbet-sincronizar";
+
+chrome.runtime.onInstalled.addListener(() => {
+  sincronizarRegras();
+  chrome.alarms.create(ALARME_SINCRONIZACAO, { periodInMinutes: 2 });
+});
+chrome.runtime.onStartup.addListener(() => {
+  sincronizarRegras();
+  chrome.alarms.create(ALARME_SINCRONIZACAO, { periodInMinutes: 2 });
+});
+chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name === ALARME_SINCRONIZACAO) sincronizarRegras();
+});
+
+sincronizarRegras();
+chrome.alarms.create(ALARME_SINCRONIZACAO, { periodInMinutes: 2 });
