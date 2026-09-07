@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StopBet.PainelPage"
+             Title="Painel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="32" Spacing="28">
+
+            <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                    <Label Text="Painel" Style="{StaticResource Headline}" />
+                    <Label Text="Visao geral da protecao contra sites de apostas e cassinos online" Style="{StaticResource SubHeadline}" />
+                </VerticalStackLayout>
+                <Button
+                    Grid.Column="1"
+                    Text="Atualizar"
+                    Style="{StaticResource BotaoSecundario}"
+                    VerticalOptions="Start"
+                    Clicked="OnAtualizarClicked" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+                <Border Grid.Column="0" Padding="18">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="TOTAL BLOQUEADOS" Style="{StaticResource TituloCartao}" />
+                        <Label x:Name="TotalLabel" Text="0" Style="{StaticResource ValorCartao}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="1" Padding="18">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="LISTA FIXA" Style="{StaticResource TituloCartao}" />
+                        <Label x:Name="ListaFixaLabel" Text="0" Style="{StaticResource ValorCartao}" TextColor="{StaticResource StopBetAccent}" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="2" Padding="18">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="CLASSIFICADO POR IA" Style="{StaticResource TituloCartao}" />
+                        <Label x:Name="IaLabel" Text="0" Style="{StaticResource ValorCartao}" TextColor="{StaticResource StopBetAlerta}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Camadas de protecao ativas" FontSize="18" FontAttributes="Bold" />
+
+                <Border Padding="0">
+                    <VerticalStackLayout x:Name="CamadasStack" Spacing="0" />
+                </Border>
+            </VerticalStackLayout>
+
+            <Border Padding="20" Stroke="{StaticResource StopBetAccent}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Uma recaida nao e um fracasso" FontAttributes="Bold" FontSize="16" />
+                    <Label
+                        Text="E uma oportunidade de reconhecer o gatilho e reforcar suas estrategias de enfrentamento. O StopBet e uma barreira tecnologica complementar ao acompanhamento terapeutico - continue firme."
+                        Style="{StaticResource SubHeadline}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button
+                Text="Gerenciar dominios bloqueados"
+                Clicked="OnGerenciarDominiosClicked"
+                HorizontalOptions="Start" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

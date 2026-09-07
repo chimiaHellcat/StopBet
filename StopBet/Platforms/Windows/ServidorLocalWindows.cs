@@ -22,6 +22,8 @@ public sealed class ServidorLocalWindows : IServidorLocal, IDisposable
     private readonly HttpListener _listener = new();
     private CancellationTokenSource? _cts;
 
+    public bool EstaAtivo => _listener.IsListening;
+
     public ServidorLocalWindows(IRepositorioDominioBloqueado repositorio, IServicoVerificacaoDominio servicoVerificacao)
     {
         _repositorio = repositorio;

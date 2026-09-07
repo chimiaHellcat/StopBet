@@ -4,11 +4,36 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:StopBet"
+    FlyoutBehavior="Locked"
+    FlyoutWidth="220"
     Title="StopBet">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <Shell.FlyoutHeader>
+        <VerticalStackLayout Padding="24,32,24,24" Spacing="2" BackgroundColor="{StaticResource StopBetCartao}">
+            <Label Text="StopBet" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource StopBetTexto}" />
+            <Label Text="Controle de estimulos digitais" FontSize="12" TextColor="{StaticResource StopBetTextoMuted}" />
+        </VerticalStackLayout>
+    </Shell.FlyoutHeader>
+
+    <Shell.FlyoutFooter>
+        <Label
+            Padding="24,12,24,20"
+            Text="URI Erechim/RS - TCC"
+            FontSize="11"
+            TextColor="{StaticResource StopBetTextoMuted}"
+            BackgroundColor="{StaticResource StopBetCartao}" />
+    </Shell.FlyoutFooter>
+
+    <FlyoutItem Title="Painel" Route="Painel">
+        <ShellContent ContentTemplate="{DataTemplate local:PainelPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Dominios" Route="Dominios">
+        <ShellContent ContentTemplate="{DataTemplate local:DominiosPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Extensao" Route="Extensao">
+        <ShellContent ContentTemplate="{DataTemplate local:ExtensaoPage}" />
+    </FlyoutItem>
 
 </Shell>

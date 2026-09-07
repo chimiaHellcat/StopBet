@@ -62,6 +62,13 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<!-- Empacota a extensao de navegador junto com o executavel, pra o app conseguir
+	     localiza-la e oferece-la pra download em qualquer maquina onde for instalado -
+	     nao so no ambiente de desenvolvimento, onde a pasta extension/ existe no repositorio. -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<None Include="..\extension\**\*.*" Link="extension\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="HtmlAgilityPack" Version="1.13.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />

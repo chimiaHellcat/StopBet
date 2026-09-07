@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StopBet.ExtensaoPage"
+             Title="Extensao">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="32" Spacing="24">
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Extensao de navegador" Style="{StaticResource Headline}" />
+                <Label
+                    Text="Bloqueio em tempo real no Edge/Chrome/Brave/Opera, inclusive para dominios nunca vistos antes"
+                    Style="{StaticResource SubHeadline}" />
+            </VerticalStackLayout>
+
+            <Border Padding="18">
+                <HorizontalStackLayout Spacing="10">
+                    <BoxView x:Name="StatusBolinha" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Center" />
+                    <Label x:Name="StatusLabel" Text="Verificando servidor local..." VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+
+            <HorizontalStackLayout Spacing="12">
+                <Button Text="Baixar extensao (.zip)" Clicked="OnBaixarExtensaoClicked" />
+                <Button Text="Abrir pagina de extensoes" Style="{StaticResource BotaoSecundario}" Clicked="OnAbrirPaginaExtensoesClicked" />
+            </HorizontalStackLayout>
+
+            <VerticalStackLayout Spacing="14">
+                <Label Text="Como instalar" FontSize="18" FontAttributes="Bold" />
+
+                <Border Padding="18">
+                    <VerticalStackLayout Spacing="14">
+                        <Label><Label.FormattedText><FormattedString>
+                            <Span Text="1. " FontAttributes="Bold" TextColor="{StaticResource StopBetAccent}" />
+                            <Span Text="Abra " />
+                            <Span Text="edge://extensions" FontFamily="Consolas" />
+                            <Span Text=" (ou " />
+                            <Span Text="chrome://extensions" FontFamily="Consolas" />
+                            <Span Text=" no Chrome)" />
+                        </FormattedString></Label.FormattedText></Label>
+
+                        <Label><Label.FormattedText><FormattedString>
+                            <Span Text="2. " FontAttributes="Bold" TextColor="{StaticResource StopBetAccent}" />
+                            <Span Text="Ative o " />
+                            <Span Text="Modo de desenvolvedor" FontAttributes="Bold" />
+                        </FormattedString></Label.FormattedText></Label>
+
+                        <Label><Label.FormattedText><FormattedString>
+                            <Span Text="3. " FontAttributes="Bold" TextColor="{StaticResource StopBetAccent}" />
+                            <Span Text="Clique em " />
+                            <Span Text="Carregar sem compactacao" FontAttributes="Bold" />
+                            <Span Text=" e selecione a pasta abaixo (ou a pasta onde voce extraiu o .zip baixado)" />
+                        </FormattedString></Label.FormattedText></Label>
+
+                        <Label><Label.FormattedText><FormattedString>
+                            <Span Text="4. " FontAttributes="Bold" TextColor="{StaticResource StopBetAccent}" />
+                            <Span Text="Pronto - dominios ja conhecidos bloqueiam na hora, dominios novos sao verificados em tempo real na primeira tentativa de acesso" />
+                        </FormattedString></Label.FormattedText></Label>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="16">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label
+                            Grid.Column="0"
+                            x:Name="CaminhoPastaLabel"
+                            FontFamily="Consolas"
+                            FontSize="12"
+                            LineBreakMode="TailTruncation"
+                            VerticalOptions="Center" />
+                        <Button
+                            Grid.Column="1"
+                            Text="Copiar caminho"
+                            Style="{StaticResource BotaoSecundario}"
+                            Clicked="OnCopiarCaminhoClicked" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

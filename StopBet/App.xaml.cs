@@ -27,7 +27,14 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new AppShell());
+		return new Window(new AppShell())
+		{
+			Title = "StopBet",
+			Width = 1100,
+			Height = 750,
+			MinimumWidth = 860,
+			MinimumHeight = 560
+		};
 	}
 
 	protected override async void OnStart()

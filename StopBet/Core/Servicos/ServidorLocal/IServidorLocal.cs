@@ -6,6 +6,8 @@ namespace StopBet.Core.Servicos.ServidorLocal;
 // sem depender de uma extensao de navegador.
 public interface IServidorLocal
 {
+    bool EstaAtivo { get; }
+
     void Iniciar();
 
     void Parar();

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StopBet.AdicionarDominioPage"
+             Title="Adicionar dominio">
+
+    <VerticalStackLayout Padding="28" Spacing="16">
+
+        <Label Text="Adicionar dominio manualmente" FontSize="20" FontAttributes="Bold" />
+        <Label
+            Text="O dominio sera bloqueado imediatamente, na mesma lista dos dominios ja conhecidos."
+            Style="{StaticResource SubHeadline}" />
+
+        <VerticalStackLayout Spacing="6" Margin="0,10,0,0">
+            <Label Text="Dominio" FontSize="13" TextColor="{StaticResource StopBetTextoMuted}" />
+            <Border Padding="12,0">
+                <Entry x:Name="DominioEntry" Placeholder="ex: exemplo.bet.br" Keyboard="Url" />
+            </Border>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="6">
+            <Label Text="Categoria" FontSize="13" TextColor="{StaticResource StopBetTextoMuted}" />
+            <Border Padding="12,0">
+                <Entry x:Name="CategoriaEntry" Text="Casa de Apostas" />
+            </Border>
+        </VerticalStackLayout>
+
+        <Label
+            x:Name="ErroLabel"
+            TextColor="{StaticResource StopBetPerigo}"
+            FontSize="13"
+            IsVisible="False" />
+
+        <HorizontalStackLayout Spacing="12" Margin="0,10,0,0">
+            <Button
+                x:Name="AdicionarBtn"
+                Text="Adicionar"
+                Clicked="OnAdicionarClicked" />
+            <Button
+                Text="Cancelar"
+                Style="{StaticResource BotaoSecundario}"
+                Clicked="OnCancelarClicked" />
+        </HorizontalStackLayout>
+
+    </VerticalStackLayout>
+
+</ContentPage>

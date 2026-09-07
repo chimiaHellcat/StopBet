@@ -39,7 +39,9 @@ public static class MauiProgram
 #endif
 
 		builder.Services.AddSingleton<SincronizadorBloqueio>();
-		builder.Services.AddTransient<MainPage>();
+		builder.Services.AddTransient<PainelPage>();
+		builder.Services.AddTransient<DominiosPage>();
+		builder.Services.AddTransient<ExtensaoPage>();
 
 		return builder.Build();
 	}

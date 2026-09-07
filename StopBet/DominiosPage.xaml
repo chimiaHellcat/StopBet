@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:StopBet"
+             x:Class="StopBet.DominiosPage"
+             Title="Dominios">
+
+    <Grid Padding="32" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="Dominios bloqueados" Style="{StaticResource Headline}" />
+            <Label x:Name="ContadorLabel" Text="Carregando..." Style="{StaticResource SubHeadline}" />
+        </VerticalStackLayout>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Border Grid.Column="0" Padding="0" VerticalOptions="Center">
+                <SearchBar
+                    x:Name="BuscaSearchBar"
+                    Placeholder="Buscar por dominio ou categoria..."
+                    TextChanged="OnBuscaTextChanged" />
+            </Border>
+            <Button
+                Grid.Column="1"
+                Text="+ Adicionar dominio"
+                Clicked="OnAdicionarClicked" />
+        </Grid>
+
+        <BoxView Grid.Row="2" HeightRequest="1" Color="{StaticResource StopBetBordaCartao}" />
+
+        <CollectionView Grid.Row="3" x:Name="DominiosCollectionView">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                    <Label Text="Nenhum dominio encontrado" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="local:ItemDominioExibicao">
+                    <Border Margin="0,6" Padding="18,14">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                            <Label
+                                Grid.Row="0" Grid.Column="0"
+                                Text="{Binding NomeDominio}"
+                                FontAttributes="Bold"
+                                FontSize="16" />
+                            <Label
+                                Grid.Row="1" Grid.Column="0"
+                                Text="{Binding Categoria}"
+                                Style="{StaticResource SubHeadline}"
+                                FontSize="12" />
+                            <HorizontalStackLayout Grid.Row="2" Grid.Column="0" Spacing="12" Margin="0,4,0,0">
+                                <Label Text="{Binding Ip, StringFormat='IP: {0}'}" FontSize="11" TextColor="{StaticResource StopBetTextoMuted}" />
+                                <Label Text="{Binding DataInclusaoTexto}" FontSize="11" TextColor="{StaticResource StopBetTextoMuted}" />
+                            </HorizontalStackLayout>
+
+                            <VerticalStackLayout Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="6" HorizontalOptions="End">
+                                <Border Padding="8,3" StrokeThickness="0" BackgroundColor="{Binding CorOrigem}">
+                                    <Label Text="{Binding Origem}" FontSize="10" TextColor="White" />
+                                </Border>
+                                <Button
+                                    Text="Remover"
+                                    Style="{StaticResource BotaoPerigo}"
+                                    FontSize="11"
+                                    Padding="10,4"
+                                    MinimumHeightRequest="0"
+                                    Command="{Binding RemoverCommand}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

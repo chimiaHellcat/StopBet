@@ -41,4 +41,27 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+
+    <!-- Paleta StopBet: mesma identidade visual da pagina de bloqueio da extensao
+         (extension/bloqueado.html), pra manter consistencia entre app e navegador. -->
+    <Color x:Key="StopBetFundo">#0F172A</Color>
+    <Color x:Key="StopBetCartao">#1E293B</Color>
+    <Color x:Key="StopBetBordaCartao">#334155</Color>
+    <Color x:Key="StopBetTexto">#E2E8F0</Color>
+    <Color x:Key="StopBetTextoMuted">#94A3B8</Color>
+    <Color x:Key="StopBetAccent">#6366F1</Color>
+    <Color x:Key="StopBetAccentEscuro">#4F46E5</Color>
+    <Color x:Key="StopBetPerigo">#F87171</Color>
+    <Color x:Key="StopBetSucesso">#4ADE80</Color>
+    <Color x:Key="StopBetAlerta">#FBBF24</Color>
+
+    <SolidColorBrush x:Key="StopBetFundoBrush" Color="{StaticResource StopBetFundo}"/>
+    <SolidColorBrush x:Key="StopBetCartaoBrush" Color="{StaticResource StopBetCartao}"/>
+    <SolidColorBrush x:Key="StopBetBordaCartaoBrush" Color="{StaticResource StopBetBordaCartao}"/>
+    <SolidColorBrush x:Key="StopBetTextoBrush" Color="{StaticResource StopBetTexto}"/>
+    <SolidColorBrush x:Key="StopBetTextoMutedBrush" Color="{StaticResource StopBetTextoMuted}"/>
+    <SolidColorBrush x:Key="StopBetAccentBrush" Color="{StaticResource StopBetAccent}"/>
+    <SolidColorBrush x:Key="StopBetPerigoBrush" Color="{StaticResource StopBetPerigo}"/>
+    <SolidColorBrush x:Key="StopBetSucessoBrush" Color="{StaticResource StopBetSucesso}"/>
+    <SolidColorBrush x:Key="StopBetAlertaBrush" Color="{StaticResource StopBetAlerta}"/>
 </ResourceDictionary>
