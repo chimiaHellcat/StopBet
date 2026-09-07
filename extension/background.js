@@ -69,6 +69,27 @@ async function adicionarRegraBloqueio(dominio) {
       },
     ],
   });
+
+  await limparCacheDoDominio(dominio);
+}
+
+// Sites que registram Service Worker proprio (PWAs, comuns em redes sociais) podem
+// continuar servindo paginas do cache deles mesmo depois de bloqueados - a regra do
+// declarativeNetRequest so intercepta requisicoes de REDE de verdade, e uma resposta
+// vinda inteiramente do cache/Service Worker do proprio site nunca chega a virar uma
+// requisicao de rede. Descoberto testando com x.com: o dominio ficava acessivel mesmo
+// com a regra de bloqueio corretamente criada, ate um hard-reload (que ignora cache)
+// forcar uma requisicao de rede de verdade. Por isso, ao bloquear um dominio pela
+// primeira vez, o cache e o Service Worker daquela origem sao limpos tambem.
+async function limparCacheDoDominio(dominio) {
+  try {
+    await chrome.browsingData.remove(
+      { origins: [`https://${dominio}`, `http://${dominio}`] },
+      { serviceWorkers: true, cache: true, cacheStorage: true }
+    );
+  } catch (erro) {
+    console.warn("StopBet: nao foi possivel limpar cache/service worker de", dominio, erro);
+  }
 }
 
 // Reconcilia as regras do DNR com a lista atual do app: adiciona o que falta E
