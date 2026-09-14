@@ -2,6 +2,7 @@ using StopBet.Core.Modelos;
 using StopBet.Core.Repositorios;
 using StopBet.Core.Servicos.Bloqueio;
 using StopBet.Core.Servicos.ServidorLocal;
+using StopBet.Core.Servicos.Verificacao;
 
 namespace StopBet;
 
@@ -10,14 +11,17 @@ public partial class PainelPage : ContentPage
     private readonly IRepositorioDominioBloqueado _repositorio;
     private readonly IServicoBloqueioDominio? _servicoBloqueio;
     private readonly IServidorLocal? _servidorLocal;
+    private readonly EstadoPausaVerificacao _estadoPausa;
 
     public PainelPage(
         IRepositorioDominioBloqueado repositorio,
+        EstadoPausaVerificacao estadoPausa,
         IServicoBloqueioDominio? servicoBloqueio = null,
         IServidorLocal? servidorLocal = null)
     {
         InitializeComponent();
         _repositorio = repositorio;
+        _estadoPausa = estadoPausa;
         _servicoBloqueio = servicoBloqueio;
         _servidorLocal = servidorLocal;
     }
@@ -25,6 +29,7 @@ public partial class PainelPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        AtualizarSecaoPausa();
         await AtualizarAsync();
     }
 
@@ -103,6 +108,32 @@ public partial class PainelPage : ContentPage
                 Color = (Color)Application.Current!.Resources["StopBetBordaCartao"]
             });
         }
+    }
+
+    private void AtualizarSecaoPausa()
+    {
+        if (_estadoPausa.Pausado)
+        {
+            PausaBolinha.Color = (Color)Application.Current!.Resources["StopBetAlerta"];
+            PausaTituloLabel.Text = "Verificacao de dominios novos pausada";
+            PausaDescricaoLabel.Text = "Dominios ja bloqueados continuam protegidos, mas dominios novos nao estao sendo checados. Lembre-se de retomar depois.";
+            PausaBorder.Stroke = (Color)Application.Current!.Resources["StopBetAlerta"];
+            PausarBtn.Text = "Retomar";
+        }
+        else
+        {
+            PausaBolinha.Color = (Color)Application.Current!.Resources["StopBetSucesso"];
+            PausaTituloLabel.Text = "Verificacao de dominios novos ativa";
+            PausaDescricaoLabel.Text = "Dominios ja bloqueados continuam protegidos. Pausar so afeta a checagem de dominios novos (util pra navegar sem interrupcoes por um tempo).";
+            PausaBorder.Stroke = (Color)Application.Current!.Resources["StopBetBordaCartao"];
+            PausarBtn.Text = "Pausar";
+        }
+    }
+
+    private void OnPausarClicked(object? sender, EventArgs e)
+    {
+        _estadoPausa.Pausado = !_estadoPausa.Pausado;
+        AtualizarSecaoPausa();
     }
 
     private async void OnGerenciarDominiosClicked(object? sender, EventArgs e)

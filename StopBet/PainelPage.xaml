@@ -42,6 +42,29 @@
                 </Border>
             </Grid>
 
+            <Border x:Name="PausaBorder" Padding="20">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <HorizontalStackLayout Spacing="8">
+                            <BoxView x:Name="PausaBolinha" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Center" />
+                            <Label x:Name="PausaTituloLabel" Text="Verificacao de dominios novos ativa" FontAttributes="Bold" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Label
+                            x:Name="PausaDescricaoLabel"
+                            Text="Dominios ja bloqueados continuam protegidos. Pausar so afeta a checagem de dominios novos (util pra navegar sem interrupcoes por um tempo)."
+                            Style="{StaticResource SubHeadline}"
+                            FontSize="12" />
+                    </VerticalStackLayout>
+                    <Button
+                        x:Name="PausarBtn"
+                        Grid.Column="1"
+                        Text="Pausar"
+                        Style="{StaticResource BotaoSecundario}"
+                        VerticalOptions="Center"
+                        Clicked="OnPausarClicked" />
+                </Grid>
+            </Border>
+
             <VerticalStackLayout Spacing="12">
                 <Label Text="Camadas de protecao ativas" FontSize="18" FontAttributes="Bold" />
 

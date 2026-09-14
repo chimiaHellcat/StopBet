@@ -15,14 +15,17 @@ public sealed class ServicoVerificacaoDominio : IServicoVerificacaoDominio
     private readonly IRepositorioDominioBloqueado _repositorio;
     private readonly IServicoClassificacaoUrl _servicoClassificacao;
     private readonly IServicoBloqueioDominio? _servicoBloqueio;
+    private readonly EstadoPausaVerificacao _estadoPausa;
 
     public ServicoVerificacaoDominio(
         IRepositorioDominioBloqueado repositorio,
         IServicoClassificacaoUrl servicoClassificacao,
+        EstadoPausaVerificacao estadoPausa,
         IServicoBloqueioDominio? servicoBloqueio = null)
     {
         _repositorio = repositorio;
         _servicoClassificacao = servicoClassificacao;
+        _estadoPausa = estadoPausa;
         _servicoBloqueio = servicoBloqueio;
     }
 
@@ -39,6 +42,17 @@ public sealed class ServicoVerificacaoDominio : IServicoVerificacaoDominio
                 DeveBloquear: true,
                 Categoria: existente.Categoria,
                 Origem: existente.Origem);
+        }
+
+        // Verificacao pausada: dominios ja conhecidos (acima) continuam bloqueados
+        // normalmente, mas nenhum dominio novo e classificado (nem chama o Gemini)
+        // enquanto pausado - deixa passar sem persistir nada.
+        if (_estadoPausa.Pausado)
+        {
+            return new ResultadoVerificacaoDominio(
+                DeveBloquear: false,
+                Categoria: "Verificacao pausada",
+                Origem: OrigemDominio.ClassificadoPorIA);
         }
 
         var classificacao = await _servicoClassificacao.ClassificarAsync(dominio, html ?? string.Empty, cancellationToken);

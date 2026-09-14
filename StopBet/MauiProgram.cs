@@ -31,6 +31,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IProvedorChaveApi, ProvedorChaveApiVariavelAmbiente>();
 		builder.Services.AddSingleton<ExtratorMetadadosHtml>();
 		builder.Services.AddHttpClient<IServicoClassificacaoUrl, ServicoClassificacaoUrlGemini>();
+		builder.Services.AddSingleton<EstadoPausaVerificacao>();
 		builder.Services.AddSingleton<IServicoVerificacaoDominio, ServicoVerificacaoDominio>();
 
 #if WINDOWS
