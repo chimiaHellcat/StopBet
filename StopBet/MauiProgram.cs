@@ -39,6 +39,10 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IServidorLocal, StopBet.WinUI.ServidorLocalWindows>();
 #endif
 
+#if ANDROID
+		builder.Services.AddSingleton<IServicoBloqueioDominio, StopBet.Platforms.Android.ServicoBloqueioDominioAndroid>();
+#endif
+
 		builder.Services.AddSingleton<SincronizadorBloqueio>();
 		builder.Services.AddTransient<PainelPage>();
 		builder.Services.AddTransient<DominiosPage>();
