@@ -4,29 +4,38 @@ Sistema de auxílio no combate ao vício em apostas online (ludopatia), desenvol
 
 ## Sobre o projeto
 
-O StopBet é um sistema multiplataforma de controle de estímulos digitais, projetado para auxiliar no tratamento da ludopatia através do bloqueio de sites de apostas e cassinos online. A ferramenta atua como uma barreira tecnológica complementar ao acompanhamento terapêutico (Terapia Cognitivo-Comportamental), reduzindo a exposição do usuário a gatilhos digitais relacionados ao jogo.
+O StopBet é um sistema multiplataforma de controle de estímulos digitais, projetado para auxiliar no tratamento da ludopatia através do bloqueio de sites de apostas e cassinos online. A ferramenta atua como uma barreira tecnológica complementar ao acompanhamento terapêutico (Terapia Cognitivo-Comportamental), reduzindo a exposição do usuário a gatilhos digitais relacionados ao jogo — sem substituir o tratamento, mas dando um instante a mais de fricção entre o impulso e o acesso.
 
-O sistema combina:
+## Como funciona
 
-- Uma lista local de domínios conhecidos (cache SQLite), para bloqueio imediato;
-- Classificação dinâmica de domínios desconhecidos via Google Gemini API, com o resultado persistido para consultas futuras;
-- Bloqueio efetivo no Windows via edição do arquivo `hosts`, aplicado automaticamente a cada decisão positiva;
-- Bloqueio em tempo real no navegador (Edge/Chrome) via extensão própria, inclusive para domínios nunca vistos antes;
-- *(planejado)* Interceptação de tráfego DNS via `VpnService` no Android;
-- *(planejado)* Sincronização de domínios bloqueados entre dispositivos via Supabase.
+O bloqueio é feito em **camadas**, cada uma cobrindo uma lacuna que a anterior deixa:
 
-## Por que hosts *e* extensão de navegador?
+1. **Lista local (SQLite)** — todo domínio já conhecido (seed inicial ou classificado antes) é consultado primeiro, sem depender de rede.
+2. **Classificação por IA (Google Gemini)** — quando o domínio é desconhecido, seu nome é enviado pra API do Gemini, que classifica se é uma casa de apostas/cassino com base no próprio domínio (e no título/meta description da página, quando disponíveis). O resultado positivo é persistido, então a mesma pergunta nunca é feita duas vezes pro mesmo domínio.
+3. **Bloqueio via `hosts` (Windows)** — todo domínio conhecido é redirecionado para `127.0.0.1` no arquivo `hosts` do sistema, bloqueando o acesso em qualquer aplicação, não só navegadores.
+4. **Extensão de navegador (Chromium)** — bloqueia em tempo real diretamente no navegador, cobrindo uma lacuna real do `hosts`: navegadores modernos (Chrome, Edge, Brave) usam **DNS-over-HTTPS** por padrão, resolvendo nomes num servidor criptografado sem passar pela resolução do sistema operacional — nesse caso o `hosts` é simplesmente ignorado, e o site abriria normalmente apesar do bloqueio estar "ativo". A extensão intercepta a navegação no próprio navegador (via `declarativeNetRequest`/`webNavigation`), então funciona independente de como o DNS foi resolvido.
 
-O bloqueio via edição do arquivo `hosts` do Windows tem uma limitação importante que só ficou evidente durante o desenvolvimento: navegadores modernos (Chrome, Edge, Brave) vêm com **DNS-over-HTTPS (DoH / "Secure DNS")** ativado por padrão, resolvendo domínios diretamente em um servidor DNS criptografado (ex.: Google, Cloudflare) sem passar pela resolução de nomes do sistema operacional. Como o `hosts` só é consultado pelo resolvedor do SO, um navegador com DoH ativo pode simplesmente ignorá-lo — o site de apostas abriria normalmente apesar do bloqueio estar "ativo", criando uma falha silenciosa: o usuário confiaria em uma proteção que, na prática, não estaria funcionando.
+`hosts` e extensão são complementares, não redundantes: o primeiro cobre qualquer aplicação mas pode ser contornado por DoH; a segunda não é afetada por DoH mas só cobre o navegador em que está instalada. Foi uma decisão tomada durante o desenvolvimento, indo além do escopo originalmente proposto no TCC (`VpnService` no Android + edição do `hosts` no Windows), especificamente pra eliminar essa lacuna.
 
-A extensão de navegador fecha exatamente essa lacuna, atuando em uma camada diferente: em vez de depender da resolução de nomes, ela intercepta a navegação diretamente no navegador (via `declarativeNetRequest`/`webNavigation`), funcionando independentemente de como — ou onde — o DNS foi resolvido.
+Também é possível **pausar temporariamente** a verificação de domínios novos pelo Painel do app (por exemplo, pra navegar sem interrupções durante uma atividade específica) — domínios já bloqueados continuam protegidos normalmente durante a pausa; só a classificação de domínios nunca vistos é suspensa, e a proteção nunca fica pausada sem o usuário perceber depois de reabrir o app (o estado não persiste entre execuções).
 
-As duas abordagens são complementares, não redundantes:
+## Interface desktop
 
-- **`hosts`** — nível do sistema operacional; cobre qualquer aplicação, não só navegadores; mas pode ser contornado por DoH
-- **extensão de navegador** — nível do navegador; não é afetada por DoH; mas cobre apenas o navegador em que está instalada
+Navegação lateral fixa com três seções, tema escuro consistente com a página de bloqueio da extensão:
 
-Essa combinação foi uma decisão técnica tomada durante o desenvolvimento, indo além do escopo originalmente proposto (`VpnService` no Android + edição do `hosts` no Windows), especificamente para eliminar essa lacuna de contorno via DoH — uma camada adicional de defesa em profundidade, e não uma solução redundante.
+- **Painel** — contadores de domínios por origem (lista fixa vs. classificados por IA), status de cada camada de proteção (lista local, hosts, servidor local da extensão) e o botão de pausar/retomar a verificação.
+- **Domínios** — lista completa com busca, adicionar um domínio manualmente (aceita uma URL completa colada, extrai só o hostname) e remover, com bloqueio/desbloqueio aplicado imediatamente.
+- **Extensão** — status do servidor local, download da extensão em `.zip` e atalho pra página de extensões do navegador.
+
+## Extensão de navegador
+
+Extensão Manifest V3 para Chromium (Edge, Chrome, Brave, Opera), empacotada junto do executável do app (não depende do repositório estar presente, funciona em qualquer instalação):
+
+- **Domínios conhecidos** são bloqueados instantaneamente via `declarativeNetRequest`, sem depender de rede.
+- **Domínios desconhecidos** são verificados ao vivo contra o servidor local do app (`http://127.0.0.1:5127`), tanto na navegação direta (`webNavigation.onBeforeNavigate`, URL original) quanto após redirecionamentos HTTP (`webNavigation.onCommitted`, URL final) — sem o segundo listener, um clique em anúncio/link de afiliado que passa por um domínio de rastreamento antes do destino final passaria batido, já que o primeiro listener só enxerga a URL antes do redirecionamento.
+- **Reconciliação de regras**: a cada sincronização (na inicialização e a cada 2 minutos, via `chrome.alarms`), as regras de bloqueio são comparadas com a lista atual do app — domínios removidos no app têm sua regra apagada na extensão também, não só adicionada quando surgem.
+- **Limpeza de cache/Service Worker**: sites que registram Service Worker próprio (PWAs, comuns em redes sociais) podem continuar servindo páginas do cache deles mesmo depois de bloqueados, porque nem `hosts` nem `declarativeNetRequest` interceptam uma resposta que nunca vira uma requisição de rede real. Por isso, ao bloquear um domínio pela primeira vez, seu cache e Service Worker são limpos (`chrome.browsingData.remove`).
+- Página de bloqueio própria, com mensagem de apoio inspirada em TCC ("uma recaída não é um fracasso").
 
 ## Tecnologias
 
@@ -52,6 +61,8 @@ StopBet/                             # Solucao
 │   │       └── ServidorLocal/       # Contrato da ponte HTTP com a extensao de navegador
 │   ├── Platforms/                   # Codigo especifico de plataforma
 │   │   └── Windows/                 # Edicao do hosts, servidor local (ponte com a extensao)
+│   ├── PainelPage / DominiosPage /
+│   │   ExtensaoPage / AdicionarDominioPage   # Telas da interface desktop
 │   └── Resources/                   # Icones, fontes, estilos
 └── extension/                       # Extensao de navegador (Manifest V3, Chromium)
 ```
@@ -60,20 +71,14 @@ StopBet/                             # Solucao
 
 **Implementado e testado:**
 
-- [x] Camada de negócio compartilhada (`Core/`)
-- [x] Repositório SQLite com CRUD assíncrono
-- [x] Classificação de domínios via Gemini API (resposta JSON estruturada: `e_aposta`, `categoria`, `confianca`)
-- [x] Seed inicial com 10 domínios de apostas conhecidos (`.bet.br`, origem `ListaFixa`)
-- [x] Serviço de verificação/decisão (`ServicoVerificacaoDominio`) — lista local primeiro, IA como fallback, persistindo classificações positivas
-- [x] Interface desktop com navegação lateral fixa (Painel, Domínios, Extensão) — tema escuro consistente com a página de bloqueio da extensão. **Painel**: contadores por origem e status de cada camada de proteção. **Domínios**: busca, adicionar manualmente (aceita URL completa colada) e remover, com bloqueio/desbloqueio aplicado na hora. **Extensão**: status do servidor local, download da extensão em `.zip` e atalho para a página de extensões do navegador
-- [x] Bloqueio via edição do arquivo `hosts` (Windows) — `IServicoBloqueioDominio` / `ServicoBloqueioDominioWindows`, idempotente, testado contra o hosts real com elevação (`requireAdministrator`)
-- [x] Aplicação em tempo real: `ServicoVerificacaoDominio` aciona o bloqueio imediatamente a cada decisão positiva, e `SincronizadorBloqueio` aplica no hosts tudo que já está na lista local assim que o app inicia. Testado no navegador de verdade: domínios reais de apostas (seed + `1xbet.com` classificado pela IA) resultaram em `ERR_CONNECTION_REFUSED`, incluindo a variante `www.` (bug real encontrado e corrigido: uma entrada de hosts não cobre a outra)
-- [x] Extensão de navegador (Chromium) com bloqueio em tempo real: domínios conhecidos via `declarativeNetRequest` (instantâneo), domínios desconhecidos verificados ao vivo tanto na navegação direta (`webNavigation.onBeforeNavigate`, URL original) quanto após redirecionamentos HTTP (`webNavigation.onCommitted`, URL final) → servidor local → Gemini. Página de bloqueio própria com mensagem motivacional. Testado com domínio conhecido (`bet365.bet.br`), desconhecido via digitação direta (`sportingbet.com`) e desconhecido via cadeia de redirecionamento simulando um clique em anúncio/link de afiliado (`brazino777.bet.br`), todos bloqueados corretamente
-- [x] Resposta da verificação em tempo real desacoplada da aplicação do bloqueio no `hosts`: a extensão recebe o veredito assim que a classificação termina, sem esperar a escrita no `hosts` nem o `ipconfig /flushdns` (que sozinho custa ~1s de spawn de processo) — essa aplicação roda em segundo plano, já que o bloqueio da aba pela extensão não depende do `hosts`
-- [x] Retry com backoff exponencial para erros transitórios da API do Gemini (429 rate limit, 503 sobrecarga) — sem isso, esses erros derrubavam a classificação silenciosamente (nenhum aviso visível, o domínio simplesmente ficava sem bloquear)
-- [x] Teste de acurácia em lote: 68 domínios de apostas reais e nunca cadastrados (mistura de marcas licenciadas `.bet.br` e operadoras internacionais não autorizadas no Brasil), incluindo rajadas propositalmente pesadas para forçar rate limiting — **68/68 classificados corretamente como aposta, 0 falso negativo**. Complementado por testes reais no navegador via busca + clique em anúncio patrocinado (não digitação direta), capturando inclusive subdomínios nunca vistos antes (ex.: `casino.bet365.bet.br`, `ads.betmgm.bet.br`), ambos bloqueados corretamente
-- [x] Reconciliação de regras na extensão: descoberto que remover um domínio no app (manual ou não) não tinha efeito nenhum na extensão, que só sabia *adicionar* regras no `declarativeNetRequest`, nunca remover — um domínio desbloqueado no app continuava bloqueado no navegador para sempre. Corrigido: a sincronização agora compara a lista atual do app com as regras existentes, remove as órfãs e adiciona as que faltam, rodando na inicialização e a cada 2 minutos (`chrome.alarms`). Testado: bloqueei `x.com` manualmente, removi pelo app, recarreguei a extensão e confirmei `x.com` acessível de novo
-- [x] Limpeza de cache/Service Worker ao bloquear: testando com `x.com` (rede social real, PWA com Service Worker próprio), a regra de bloqueio era criada corretamente mas o domínio continuava acessível — nem `hosts` nem `declarativeNetRequest` interceptam uma página servida inteiramente do cache/Service Worker do próprio site, já que nenhum dos dois mecanismos tem uma requisição de rede real pra agir sobre (confirmado via console do service worker: um hard-reload, que ignora cache, disparava o bloqueio; uma aba nova normal, logo em seguida, voltava a servir do cache). Corrigido chamando `chrome.browsingData.remove` (cache + Service Worker + Cache Storage da origem) no momento em que um domínio é bloqueado pela primeira vez. Testado: após a correção, navegação normal para `x.com`/`www.x.com` bloqueia de forma consistente, sem precisar de hard-reload
+- [x] Camada de negócio compartilhada (`Core/`): modelos, repositório SQLite assíncrono, seed inicial com 10 domínios de apostas conhecidos (`.bet.br`, origem `ListaFixa`)
+- [x] Classificação de domínios via Gemini API (resposta JSON estruturada: `e_aposta`, `categoria`, `confianca`), com retry e backoff exponencial para erros transitórios (429 rate limit, 503 sobrecarga) — sem isso, esses erros derrubavam a classificação silenciosamente, sem nenhum aviso visível
+- [x] Serviço de verificação/decisão (`ServicoVerificacaoDominio`, o "cérebro") — lista local primeiro, IA como fallback, persistindo classificações positivas e aplicando o bloqueio em todas as camadas disponíveis; pode ser pausado temporariamente pelo Painel
+- [x] Interface desktop completa (Painel, Domínios, Extensão) — ver seções acima
+- [x] Bloqueio via edição do arquivo `hosts` (Windows), idempotente, cobrindo domínio e variante `www.` como par, aplicado automaticamente a cada decisão positiva e sincronizado no início do app; testado contra o hosts real com elevação (`requireAdministrator`)
+- [x] Extensão de navegador (Chromium) com bloqueio em tempo real — ver seção acima. Aplicação do bloqueio desacoplada da resposta pra extensão (escrita no `hosts` e `ipconfig /flushdns` rodam em segundo plano, sem atrasar o veredito)
+- [x] **Teste de acurácia em lote**: 68 domínios de apostas reais e nunca cadastrados (marcas licenciadas `.bet.br` + operadoras internacionais não autorizadas no Brasil), incluindo rajadas propositalmente pesadas para forçar rate limiting — **68/68 classificados corretamente como aposta, 0 falso negativo**
+- [x] Testes reais no navegador: domínio conhecido, domínio desconhecido via digitação direta, e domínio desconhecido via cadeia de redirecionamento (simulando clique em anúncio/link de afiliado) — capturando inclusive subdomínios nunca vistos antes (ex.: `casino.bet365.bet.br`), todos bloqueados corretamente
 
 **Ainda não implementado:**
 
@@ -83,9 +88,9 @@ StopBet/                             # Solucao
 
 ## Limitações conhecidas
 
-- **Latência na primeira verificação de um domínio desconhecido**: entre ~1s e ~4s, na prática, entre a navegação e o bloqueio efetivo — tempo integralmente da chamada de rede à API do Gemini (inferência do modelo), já que toda a aplicação do bloqueio local (regra do `declarativeNetRequest`, escrita no `hosts`) roda de forma desacoplada e não soma a esse tempo. Durante essa janela, o site pode chegar a carregar brevemente antes do redirecionamento. É uma limitação inerente a depender de uma IA externa para classificar domínios nunca vistos antes — domínios já conhecidos (seed ou já classificados antes) continuam bloqueados instantaneamente, sem essa espera. Decisão tomada durante o desenvolvimento: aceitar essa variância como o custo do modelo em tempo real, em vez de trocar de modelo de IA ou introduzir heurísticas locais adicionais (nome do domínio, por exemplo) que fugiriam do escopo de "classificação via IA" proposto no TCC.
-- **Cota da API do Gemini sob carga pesada**: a chave usada em desenvolvimento é de camada gratuita, com um limite de requisições por minuto. Testando várias dezenas de domínios em sequência rápida (rajadas de 6-8 simultâneas), esse limite é excedido e a API responde com erro 429 — o app já tenta de novo automaticamente (até 3 vezes, com espera crescente), o que resolve a grande maioria dos casos, mas sob carga muito pesada e sustentada ainda pode não ser suficiente. Em uso normal (uma pessoa navegando, não uma rajada de testes automatizados) esse limite dificilmente é atingido.
-- **Cor de fundo da barra lateral no Windows**: o menu lateral (flyout) do Shell renderiza com fundo preto em vez da paleta escura usada no resto do app — o Windows aplica um material próprio (Mica) na área de navegação do WinUI3 que não é totalmente sobrescrito pelas propriedades `Shell.FlyoutBackgroundColor`/`Shell.FlyoutBackdrop`. Puramente estético, não afeta funcionalidade; não investigado a fundo ainda.
+- **Latência na primeira verificação de um domínio desconhecido**: entre ~1s e ~6s na prática, tempo da chamada de rede à API do Gemini — durante essa janela o site pode chegar a carregar brevemente antes do redirecionamento. Domínios já conhecidos continuam bloqueados instantaneamente. Decisão tomada durante o desenvolvimento: aceitar essa variância como custo do modelo em tempo real, em vez de introduzir heurísticas locais que fugiriam do escopo de "classificação via IA" proposto no TCC.
+- **Cota da API do Gemini sob carga pesada**: a chave usada em desenvolvimento é de camada gratuita, com limite de requisições por minuto — sob rajadas pesadas (vários domínios em sequência rápida) a API responde 429, mitigado por retry automático mas não eliminado sob carga muito pesada e sustentada. Em uso normal isso dificilmente é atingido, mas vale notar que **todo** domínio novo visitado (não só os suspeitos) passa por esse mesmo caminho, já que não há como saber de antemão que um domínio é seguro sem perguntar à IA.
+- **Cor de fundo da barra lateral no Windows**: o menu lateral (flyout) do Shell renderiza com fundo preto em vez da paleta escura usada no resto do app — o Windows aplica um material próprio (Mica) na área de navegação do WinUI3 que não é totalmente sobrescrito pelas propriedades `Shell.FlyoutBackgroundColor`/`Shell.FlyoutBackdrop`. Puramente estético, não afeta funcionalidade.
 
 ## Como rodar
 
@@ -115,7 +120,7 @@ dotnet run --project StopBet/StopBet.csproj -f net10.0-windows10.0.19041.0
 
 ### Instalar a extensão de navegador (opcional, para bloqueio em tempo real)
 
-A extensão é empacotada junto do executável (não depende do repositório estar presente). Pela aba **Extensão** do app, dá pra baixar um `.zip` com os arquivos ou abrir a página de extensões do navegador diretamente. Depois, com o app StopBet rodando (ele expõe a ponte local em `http://127.0.0.1:5127`):
+A extensão é empacotada junto do executável. Pela aba **Extensão** do app, dá pra baixar um `.zip` com os arquivos ou abrir a página de extensões do navegador diretamente. Depois, com o app StopBet rodando (ele expõe a ponte local em `http://127.0.0.1:5127`):
 
 1. Abra `edge://extensions` (ou `chrome://extensions` no Chrome) — a aba **Extensão** do app faz isso por você, com uma ressalva: o Chromium bloqueia por segurança que um programa externo navegue direto pra uma página interna quando o navegador já está aberto, então às vezes só abre uma aba em branco — nesse caso o endereço já foi copiado pra área de transferência, é só colar
 2. Ative o **Modo de desenvolvedor**
